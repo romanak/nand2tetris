@@ -1,0 +1,49 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/03/a/PC.hdl
+
+/**
+ * A 16-bit counter with load and reset control bits.
+ * if      (reset[t] == 1) out[t+1] = 0
+ * else if (load[t] == 1)  out[t+1] = in[t]
+ * else if (inc[t] == 1)   out[t+1] = out[t] + 1  (integer addition)
+ * else                    out[t+1] = out[t]
+ */
+
+CHIP PC {
+    IN in[16],load,inc,reset;
+    OUT out[16];
+
+    PARTS:
+    // obtain a 16-bit zero for the reset procedure
+    Not16(in=in, out=notin);
+    And16(a=in, b=notin, out=zero16);
+    
+    // get the current register value and increment it
+    Inc16(in=curReg, out=curRegInc);
+    
+    // if the control bit (inc == 1) then pass the incremented value,
+    // otherwise pass the current register value
+    Mux16(a=curReg, b=curRegInc, sel=inc, out=ifInc);
+    
+    // if the control bit (load == 1) then pass the input value,
+    // otherwise pass the previously calculated value
+    Mux16(a=ifInc, b=in, sel=load, out=ifLoad);
+    
+    // if the control bit (reset == 1) then pass the 16-bit zero
+    // otherwise pass the previously calculated value
+    Mux16(a=ifLoad, b=zero16, sel=reset, out=ifReset);
+    
+    // decide if either control bits are set (inc Or load Or reset == 1)
+    // and use it later as the load control bit in the register
+    Or(a=load, b=inc, out=incOrLoad);
+    Or(a=incOrLoad, b=reset, out=incOrLoadOrReset);
+    
+    // if either control bits are set then load to the register
+    // the previously calculated value and output it
+    // otherwise output the current value in the register
+    // note that we also use the output from the register
+    // for the incrementing procedure earlier in the code
+    Register(in=ifReset, load=incOrLoadOrReset, out=curReg, out=out);
+}
